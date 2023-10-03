@@ -52,14 +52,16 @@ function generate(num){
             "type":"MONSTER"
         })
 
-        makeName(i)
+        makeName(i) //name first
         makeSize(i)
         makeBody(i)
         makeStats(i)
         makeSymbol(i)
         makeFaction(i)
-        makeDescription(i)
+        makeSpecies(i)
+        makeHarvestType(i)
         makeFlags(i)
+        makeDescription(i) //description last
     }
     document.getElementById('monJSON').innerHTML = JSON.stringify(mons, null, 1)
 
@@ -140,6 +142,8 @@ function makeSize(index){
     desc['sizeDesc'] = "A "+size+" "
 }
 
+
+//TODO: find bodytype definitions in respoitory
 const bodies = ['angel','bear','bird','blob','crab','dog','elephant','fish','flying insect','frog',
 'gator','horse','human','insect', 'kangaroo','lizard','migo','pig','spider','snake']
 function makeBody(index){
@@ -149,15 +153,43 @@ function makeBody(index){
     desc['bodyDesc'] = bodytype+"-looking creature. "
 }
 
+//stat ranges based on game_balance.md, with minor modifications
 function makeStats(index){
-    //slowest = 15 (ant larva), fastest = 280 (nether polyp)
-    let speed = randIntBetween(15, 280)
     
-    //lowest = 1 (baby chick), highest = 800 (wraith)
-    let hp = randIntBetween(10*units, 80*units)
-
+    let speed = randIntBetween(20, 300)
     mons[index]['speed'] = speed
-    mons[index]['hp']= hp
+    
+    let hp = randIntBetween(10*units, 80*units)
+    mons[index]['hp'] = hp
+
+    //turns per attack = cost / speed, higher = slower attacks
+    let attackCost = randIntBetween(100, 100*units)
+    mons[index]['attack_cost'] = attackCost
+
+    //higher = more aggressive
+    let aggression = randIntBetween(-99, 100)
+    mons[index]['aggression'] = aggression
+
+    // 0-10, higher = more dangerous
+    let meleeSkill = randIntBetween(0,units)
+    let meleeDice = randIntBetween(1, Math.ceil(units/2))
+    let diceSides = randIntBetween(2, 2+units)
+    mons[index]['melee_skill'] = meleeSkill
+    mons[index]['melee_dice'] = meleeDice
+    mons[index]['melee_dice_sides'] = diceSides
+
+    let visionDay = randIntBetween(20, 200)
+    let visionNight = Math.floor(visionDay/10)
+    mons[index]['vision_day'] = visionDay
+    mons[index]['vision_night'] = visionNight
+
+    let illuminates = randIntBetween(0,1)
+    if (illuminates){
+        let amt = randIntBetween(0,units)
+        mons[index]['luminance'] = amt
+    }
+
+
 }
 
 const fgColours = ['black', 'red', 'green', 'blue', 'brown','cyan','light_cyan', 'magenta', 'dark_gray', 
@@ -178,13 +210,47 @@ function makeSymbol(index){
     mons[index]['color'] = colour
 }
 
+// TODO: get from repository: data/json/monster_factions.json
 const factions = ['zombie', 'human', 'animal', 'nether', 'mutant', 'bot', 'insect','spider','fungus']
 function makeFaction(index){
     let faction = factions[randIntBetween(0,factions.length-1)]
-
-    mons[index]['default_faction'] = faction
+    mons[index]['default_faction'] = faction  
 }
 
+// TODO: get from repository: data/json/species.json
+const speciesList = ['HUMAN', 'ROBOT', 'ZOMBIE', 'MAMMAL', 'BIRD', 'FISH', 'REPTILE', 'WORM', 'MOLLUSK',
+'AMPHIBIAN', 'INSECT', 'SPIDER', 'FUNGUS', 'PLANT', 'NETHER', 'MUTANT', 'BLOB', 'HORROR', 'ABERRATION',
+'HALLUCINATION', 'UNKNOWN']
+function makeSpecies(index){
+    let species = speciesList[randIntBetween(0,speciesList.length-1)]
+    mons[index]['species'] = species
+}
+
+
+//TODO: get options from repository: data/json/harvest.json
+const drops = ['zombie', 'arachnid','human', 'fungaloid', 'fish_large', 'mammal_large_leather','bird_large', 'mr_bones','triffid_large']
+function makeHarvestType(index){
+    let type = drops[randIntBetween(0,drops.length-1)]
+    mons[index]['harvest'] = type
+}
+
+
+const onDeath = ['blobsplit','boomer','disappear','fireball','smokeburst','fungus','normal', 'guilt']
+function makeDeathFunction(index){
+    let numF = randIntBetween(0,Math.ceil(units/4))
+    let func = []
+    let temp = onDeath.slice()
+    for (let i=0;i<numF;i++){
+        let idx = randIntBetween(0,onDeath.length-1)
+        func.push(temp[idx])
+        temp.splice(idx,1)
+    }
+
+    mons[index]['death_function'] = func
+}
+
+
+//TODO: generate description from all notable features after everything else generated
 function makeDescription(index){
     let msg = ''
     for (i in desc){
@@ -208,7 +274,8 @@ const deadFlags = ['BONES', 'CHITIN','FAT','FEATHER','FUR','LEATHER','POISON','W
 //flags related to creature senses
 const senseFlags = ['HEARS','GOODHEARING', 'KEENNOSE', 'SEES','SMELLS']
 
-//milking products should require processing
+//milking products should require processing before being useful
+//TODO: get options from respository: data/json/items/comestibles/brewing.json
 const milkProducts = ['milk_raw', 'denat_alcohol', 'brew_pine_wine']
 
 function makeFlags(index){
@@ -264,6 +331,10 @@ function makeFlags(index){
     for (let i=0;i<numCombat;i++){
         let select = randIntBetween(0,temp.length-1)
         flags.push(temp[select])
+        if (temp[select] == 'GRABS'){
+            let strength = randIntBetween(1,units)
+            mons[index]['grab_strength'] = strength
+        }
         temp.splice(select,1)
     }
 

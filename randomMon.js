@@ -61,6 +61,10 @@ function generate(num){
         makeSpecies(i)
         makeHarvestType(i)
         makeFlags(i)
+        makeDeathFunction(i)
+        makeEmitFields(i)
+        makeBabies(i)
+        //makeSpecialAttacks(i) TODO: fix special attacks being invalid
         makeDescription(i) //description last
     }
     document.getElementById('monJSON').innerHTML = JSON.stringify(mons, null, 1)
@@ -155,7 +159,6 @@ function makeBody(index){
 
 //stat ranges based on game_balance.md, with minor modifications
 function makeStats(index){
-    
     let speed = randIntBetween(20, 300)
     mons[index]['speed'] = speed
     
@@ -189,8 +192,26 @@ function makeStats(index){
         mons[index]['luminance'] = amt
     }
 
-
+    let regen = randIntBetween(0,units)
+    mons[index]['regenerates'] = regen
 }
+
+//TODO: find special attacks in repository
+const specials = ['bite', 'scratch', 'leap']
+function makeSpecialAttacks(index){
+    let atk = specials[randIntBetween(0,specials.length-1)]
+
+    let cooldown = randIntBetween(units, 20-units)
+
+    let atkObj = {'type': atk, 'cooldown': cooldown}
+    if (atk == 'leap' || atk == 'lunge'){
+        let range = randIntBetween(1, units)
+        atkObj['max_range'] = range
+    }
+
+    mons[index]['special_attacks'] = [atkObj]
+}
+
 
 const fgColours = ['black', 'red', 'green', 'blue', 'brown','cyan','light_cyan', 'magenta', 'dark_gray', 
 'light_green','light_red','yellow','light_blue','pink', 'white','light_gray', 'pink']
@@ -235,7 +256,7 @@ function makeHarvestType(index){
 }
 
 
-const onDeath = ['blobsplit','boomer','disappear','fireball','smokeburst','fungus','normal', 'guilt']
+const onDeath = ['BLOBSPLIT','BOOMER','DISAPPEAR','FIREBALL','SMOKEBURST','FUNGUS','NORMAL', 'GUILT']
 function makeDeathFunction(index){
     let numF = randIntBetween(0,Math.ceil(units/4))
     let func = []
@@ -341,7 +362,39 @@ function makeFlags(index){
     mons[index]['flags'] = flags
 }
 
+function makeEmotionTriggers(index){
+    //TODO: fear, anger, placate triggers
+}
 
+
+function makeBabies(index){
+    let isEggLayer = randIntBetween(0,1)
+    if (isEggLayer){
+        //TODO: add new egg type for randomly generated monsters, replace code below
+        baby = mons[index].name
+    } else {
+        baby = mons[index].name
+    }
+
+    count = randIntBetween(1, Math.ceil(6/units))
+
+    timer = 30*units //in days
+
+    //TODO: add conditional for egg layers after new egg implemented, "baby_egg"
+    mons[index]['reproduction'] = {'baby_monster': baby, 'baby_count':count, 'baby_timer': timer}
+}
+
+
+// get from file data/json/emit.json?
+const fields = ['emit_toxic_cloud', 'emit_smoke_plume', 'emit_shadow_field', 'emit_shock_burst']
+function makeEmitFields(index){
+    let emit = fields[randIntBetween(0,fields.length-1)]
+    let delay = Math.ceil(60/units) // in minutes
+
+    //TODO: add multiple emits for stronger monsters?
+
+    mons[index]['emit_fields'] = [{'emit_id': emit,'delay': delay+' m'}]
+}
 
 
 //

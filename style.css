@@ -1,0 +1,58 @@
+html {
+    color: green;
+    background-color: black;
+}
+
+.monsterEntry{
+    float: left;
+    margin: 5px;
+    width: 300px;
+    height: 500px;
+    border: solid green 1px;
+    text-align: center;
+    overflow-y: auto;
+}
+
+.stickyScroll{
+    position: sticky;
+    top:0px;
+    border: solid green 1px;
+    background-color: black;
+    z-index: 1;
+}
+
+.nameLabel{
+    height: fit-content;
+    margin: 0px;
+    border: solid green 1px;
+}
+
+.monsterImg{
+    width: 30px;
+    height: 30px;
+}
+
+.statEntry{
+    border: solid green 1px;
+    height: fit-content;
+}
+
+.statLabel{
+    float: left;
+    text-align: right;
+    margin-left: 5px;
+    width:auto
+}
+
+.statLabel::after{
+    content: ':';
+    position: relative;
+    left: 3px;
+}
+
+.statValue{
+    display: block;
+    text-align: left;
+    margin-right: 5px;
+    margin-left: 40%;
+}

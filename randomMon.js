@@ -1,7 +1,7 @@
 window.onload = function(){
     let btn = document.getElementById('enterInput')
     btn.addEventListener('click', startGenerate)
-
+    var entryContainer = document.getElementById('entryContainer')
     /* uncomment after "get options from repository" implemented
     getMonsterFlags()
     getColors()
@@ -10,6 +10,7 @@ window.onload = function(){
 
 function startGenerate(){
     var numMon = document.getElementById('numInput').value
+    entryContainer.innerHTML = ''
     generate(numMon)
 }
 
@@ -17,6 +18,9 @@ var units = 0
 var desc= {
     'sizeDesc': '',
     'bodyDesc': '',
+}
+var entry = {
+
 }
 var mons = []
 /* MONSTER TEMPLATE
@@ -45,6 +49,9 @@ var mons = []
     "flags": [ "SEES", "HEARS", "GOODHEARING", "SMELLS", "ANIMAL", "PATH_AVOID_DANGER_1", "WARM", "HIT_AND_RUN" ]
     },
 */
+
+
+
 function generate(num){
     mons=[]
     for (let i=0;i<num;i++){
@@ -66,10 +73,12 @@ function generate(num){
         makeBabies(i)
         //makeSpecialAttacks(i) TODO: fix special attacks being invalid
         makeDescription(i) //description last
+
+        createEntry(i)
+        entry = {}
     }
     document.getElementById('monJSON').innerHTML = JSON.stringify(mons, null, 1)
 
-    //TODO: make pretty columns to preview generated monsters
     //TODO: let user select desired monsters to include
     //TODO: combine included monsters into monsters.json and let user download
 }
@@ -129,7 +138,10 @@ function makeSize(index){
     let volume = randIntBetween(base, base*units)
     
     mons[index]['weight'] = weight+'kg'
+    entry["Weight"] = weight+' kg'
+
     mons[index]['volume'] = volume+'L'
+    entry['Volume'] = volume+' L'
     
     let size = ''
     if (volume < 10){
@@ -155,23 +167,28 @@ function makeBody(index){
 
     mons[index]['bodytype'] = bodytype
     desc['bodyDesc'] = bodytype+"-looking creature. "
+    entry['Body Type'] = capitalise(bodytype)
 }
 
 //stat ranges based on game_balance.md, with minor modifications
 function makeStats(index){
     let speed = randIntBetween(20, 300)
     mons[index]['speed'] = speed
+    entry['Speed'] = speed
     
     let hp = randIntBetween(10*units, 80*units)
     mons[index]['hp'] = hp
+    entry["HP"] = hp
 
     //turns per attack = cost / speed, higher = slower attacks
     let attackCost = randIntBetween(100, 100*units)
     mons[index]['attack_cost'] = attackCost
+    entry['Attack Cost'] = attackCost
 
     //higher = more aggressive
     let aggression = randIntBetween(-99, 100)
     mons[index]['aggression'] = aggression
+    entry['Aggression'] = aggression
 
     // 0-10, higher = more dangerous
     let meleeSkill = randIntBetween(0,units)
@@ -180,20 +197,29 @@ function makeStats(index){
     mons[index]['melee_skill'] = meleeSkill
     mons[index]['melee_dice'] = meleeDice
     mons[index]['melee_dice_sides'] = diceSides
+    entry['Melee Skill'] = meleeSkill
+    entry['Melee Dice'] = meleeDice + 'd' + diceSides
 
     let visionDay = randIntBetween(20, 200)
     let visionNight = Math.floor(visionDay/10)
     mons[index]['vision_day'] = visionDay
     mons[index]['vision_night'] = visionNight
+    entry['Day Vision'] = visionDay + ' Tile(s)'
+    entry['Night Vision'] = visionNight + ' Tile(s)'
 
     let illuminates = randIntBetween(0,1)
     if (illuminates){
-        let amt = randIntBetween(0,units)
+        let amt = randIntBetween(1,units)
         mons[index]['luminance'] = amt
+        entry['Illuminates'] = amt+' Tile(s)'
     }
 
-    let regen = randIntBetween(0,units)
-    mons[index]['regenerates'] = regen
+    let regens = randIntBetween(0,1)
+    if (regens){
+        let amt = randIntBetween(1,units)
+        mons[index]['regenerates'] = amt
+        entry['Regenerates'] = amt + ' HP/s'
+    }
 }
 
 //TODO: find special attacks in repository
@@ -224,7 +250,10 @@ function makeSymbol(index){
     } while (background == foreground)
     let colour = foreground+'_'+background
 
-    //TODO: more complex symbol generation
+    entry['fg'] = foreground
+    entry['bg'] = background
+
+    //TODO: more complex symbol generation?
     let symbol = mons[index].bodytype[0]
 
     mons[index]['symbol'] = symbol
@@ -236,6 +265,7 @@ const factions = ['zombie', 'human', 'animal', 'nether', 'mutant', 'bot', 'insec
 function makeFaction(index){
     let faction = factions[randIntBetween(0,factions.length-1)]
     mons[index]['default_faction'] = faction  
+    entry['Faction'] = capitalise(faction)
 }
 
 // TODO: get from repository: data/json/species.json
@@ -245,10 +275,12 @@ const speciesList = ['HUMAN', 'ROBOT', 'ZOMBIE', 'MAMMAL', 'BIRD', 'FISH', 'REPT
 function makeSpecies(index){
     let species = speciesList[randIntBetween(0,speciesList.length-1)]
     mons[index]['species'] = species
+    entry['Species'] = capitalise(species.toLowerCase())
 }
 
 
 //TODO: get options from repository: data/json/harvest.json
+//TODO: make custom harvest definition based on flags?
 const drops = ['zombie', 'arachnid','human', 'fungaloid', 'fish_large', 'mammal_large_leather','bird_large', 'mr_bones','triffid_large']
 function makeHarvestType(index){
     let type = drops[randIntBetween(0,drops.length-1)]
@@ -256,18 +288,39 @@ function makeHarvestType(index){
 }
 
 
-const onDeath = ['BLOBSPLIT','BOOMER','DISAPPEAR','FIREBALL','SMOKEBURST','FUNGUS','NORMAL', 'GUILT']
+const onDeath = ['BLOBSPLIT','BOOMER','DISAPPEAR','FIREBALL','SMOKEBURST','FUNGUS', 'GUILT']
+const onDeathEntry = {
+    'BLOBSPLIT': 'splits into blobs',
+    'BOOMER': 'bursts into bile',
+    'DISAPPEAR': 'stops existing',
+    'FIREBALL': 'explodes in fire',
+    'SMOKEBURST': 'bursts into smoke',
+    'FUNGUS': 'releases fungal spores',
+    'GUILT': 'causes guilt'
+}
 function makeDeathFunction(index){
     let numF = randIntBetween(0,Math.ceil(units/4))
     let func = []
     let temp = onDeath.slice()
     for (let i=0;i<numF;i++){
-        let idx = randIntBetween(0,onDeath.length-1)
+        let idx = randIntBetween(0,temp.length-1)
         func.push(temp[idx])
         temp.splice(idx,1)
     }
-
-    mons[index]['death_function'] = func
+    if (func.length > 0){
+        mons[index]['death_function'] = func
+        entry['On Death'] = capitalise(onDeathEntry[func[0]])
+        if (func.length > 1){
+            for (let i = 1;i<func.length;i++){
+                if (i == func.length-1){
+                    entry['On Death'] += ' and '
+                } else {
+                    entry['On Death'] += ', '
+                }
+                entry['On Death'] += onDeathEntry[func[i]]
+            }
+        }
+    }
 }
 
 
@@ -298,6 +351,11 @@ const senseFlags = ['HEARS','GOODHEARING', 'KEENNOSE', 'SEES','SMELLS']
 //milking products should require processing before being useful
 //TODO: get options from respository: data/json/items/comestibles/brewing.json
 const milkProducts = ['milk_raw', 'denat_alcohol', 'brew_pine_wine']
+const milkEntry = {
+    'milk_raw':'milk', 
+    'denat_alcohol': 'denatured alcohol',
+    'brew_pine_wine': 'pine wine must'
+}
 
 function makeFlags(index){
     let flags = []
@@ -333,6 +391,7 @@ function makeFlags(index){
                 let ammo = {}
                 ammo[milkProducts[product]] = 5*units
                 mons[index]['starting_ammo'] = ammo
+                entry['Produces'] = (5*units)+' units of '+milkEntry[milkProducts[product]]
                 console.log(ammo)
             }
             temp.splice(select,1)
@@ -371,9 +430,9 @@ function makeBabies(index){
     let isEggLayer = randIntBetween(0,1)
     if (isEggLayer){
         //TODO: add new egg type for randomly generated monsters, replace code below
-        baby = mons[index].name
+        baby = mons[index].id
     } else {
-        baby = mons[index].name
+        baby = mons[index].id
     }
 
     count = randIntBetween(1, Math.ceil(6/units))
@@ -381,12 +440,23 @@ function makeBabies(index){
     timer = 30*units //in days
 
     //TODO: add conditional for egg layers after new egg implemented, "baby_egg"
+    //TODO: change entry message for egglayers
     mons[index]['reproduction'] = {'baby_monster': baby, 'baby_count':count, 'baby_timer': timer}
+    if (count > 1){
+        entry['Reproduction'] = 'Births '+count+' babies every '+timer+' days'
+    } else {
+        entry['Reproduction'] = 'Births '+count+' baby every '+timer+' days'
+    }
 }
 
 
 // get from file data/json/emit.json?
-const fields = ['emit_toxic_cloud', 'emit_smoke_plume', 'emit_shadow_field', 'emit_shock_burst']
+const fields = ['emit_toxic_cloud', 'emit_smoke_plume', 'emit_shadow_field']
+const fieldsEntry = {
+    'emit_toxic_cloud':'toxic vapours', 
+    'emit_smoke_plume':'smoke', 
+    'emit_shadow_field':'fields of darkness'
+}
 function makeEmitFields(index){
     let emit = fields[randIntBetween(0,fields.length-1)]
     let delay = Math.ceil(60/units) // in minutes
@@ -394,9 +464,59 @@ function makeEmitFields(index){
     //TODO: add multiple emits for stronger monsters?
 
     mons[index]['emit_fields'] = [{'emit_id': emit,'delay': delay+' m'}]
+
+    entry['Emits'] = capitalise(fieldsEntry[emit])+ ' every '+delay+' minutes'
 }
 
+const exclude = new Set(['type', 'name', 'id', 'symbol', 'color', 'harvest', 'flags', 'melee_dice_sides','description'])
+function createEntry(index){
+    
+    let entryBox = document.createElement('div')
+    entryBox.className = 'monsterEntry'
 
+    let sticky = document.createElement('div')
+    sticky.className = 'stickyScroll'
+
+    let nameLabel = document.createElement('p')
+    nameLabel.innerHTML = mons[index].name.str
+    nameLabel.className = 'nameLabel'
+    sticky.append(nameLabel)
+
+    let monImg = document.createElement('canvas')
+    monImg.className = 'monsterImg'
+    sticky.append(monImg)
+    ctx = monImg.getContext('2d')
+    ctx.fillText(mons[index].symbol, 0,0)
+
+    entryBox.append(sticky)
+
+    for (i in entry){
+        if (i == 'fg' || i == 'bg'){
+            continue
+        }
+        let statBox = document.createElement('div')
+        statBox.className = 'statEntry'
+
+        let label = document.createElement('span')
+        label.className = 'statLabel'
+        label.innerHTML = i
+        statBox.append(label)
+
+        let value = document.createElement('span')
+        value.className = 'statValue'
+        value.innerHTML = entry[i]
+        statBox.append(value)
+
+        entryBox.append(statBox)
+    }
+    entryContainer.append(entryBox)
+}
+
+function capitalise(str){
+    let result = str[0].toUpperCase()
+    result += str.slice(1)
+    return result
+}
 //
 //  TODO: update code to get options directly from github repository
 //  TODO: add toggle for DDA or BN

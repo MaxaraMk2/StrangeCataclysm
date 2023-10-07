@@ -1,3 +1,5 @@
+
+
 window.onload = function(){
     let btn = document.getElementById('enterInput')
     btn.addEventListener('click', startGenerate)
@@ -8,8 +10,24 @@ window.onload = function(){
     */
 }
 
+
+const modInfo = [
+    {
+      "type": "MOD_INFO",
+      "id": "StrangeCreatures",
+      "name": "Strange Creatures of the Cataclysm",
+      "authors": ["MaxaraMk2"],
+      "description": "Adds randomly generated creatures.",
+      "category": "creatures",
+      "dependencies": [ "bn"]
+    }
+  ]
+
 function startGenerate(){
     var numMon = document.getElementById('numInput').value
+    let btn = document.getElementById('dlButton')
+    btn.style.display = 'inline'
+    btn.addEventListener('click', downloadZip)
     entryContainer.innerHTML = ''
     generate(numMon)
 }
@@ -76,8 +94,10 @@ function generate(num){
 
         createEntry(i)
         entry = {}
+        
     }
-    document.getElementById('monJSON').innerHTML = JSON.stringify(mons, null, 1)
+    makeMonsterGroups()
+    //document.getElementById('monJSON').innerHTML = JSON.stringify(mons, null, 1)
 
     //TODO: let user select desired monsters to include
     //TODO: combine included monsters into monsters.json and let user download
@@ -172,7 +192,8 @@ function makeBody(index){
 
 //stat ranges based on game_balance.md, with minor modifications
 function makeStats(index){
-    let speed = randIntBetween(20, 300)
+    //player speed ~100
+    let speed = randIntBetween(20, 100+(10*units))
     mons[index]['speed'] = speed
     entry['Speed'] = speed
     
@@ -336,7 +357,7 @@ function makeDescription(index){
 //flag lists are manually curated
 //flags relating to fighting them
 const combatFlags = ['ACIDPROOF', 'ANIMAL', 'ATTACKMON', 'BLEED', 'COLDPROOF','ELECTRIC','ELECTRONIC',
- 'FIREPROOF', 'FLAMMABLE', 'GRABS','HARDTOSHOOT', 'HIT_AND_RUN','NOHEAD','NO_BREATHE','PACIFIST','PARALYZE',
+ 'FIREPROOF', 'FLAMMABLE', 'GRABS','HARDTOSHOOT', 'HIT_AND_RUN','NOHEAD','NO_BREATHE','PACIFIST',
 'PLASTIC','REVIVES','VENOM','WEBWALK']
 //flags related to creature movement
 const moveFlags = ['BASHES', 'CAN_OPEN_DOORS','CLIMBS','FLIES','LOUDMOVES','SWIMS','PATH_AVOID_DANGER_1', 'PATH_AVOID_DANGER_2']
@@ -448,6 +469,29 @@ function makeBabies(index){
         entry['Reproduction'] = 'Births '+count+' baby every '+timer+' days'
     }
 }
+
+//TODO: get monster groups for general locations
+const groups = ['GROUP_FOREST']
+var monGroups = {
+    'type':'monstergroup',
+    'default':'mon_null',
+    'monsters':[]
+}
+function makeMonsterGroups(){
+    //TODO: randomly select spawn group
+    monGroups['name'] = groups[0]
+
+    for (let i=0;i<mons.length;i++){
+        let obj = {}
+        obj['monster'] = mons[i].id
+        obj['freq'] = 15 //TODO: change frequency based on difficulty?
+        obj['cost_multiplier'] = 1 //not sure what this affects
+        let maxPack = Math.floor(10*(1/units))
+        obj['pack_size'] = [1, maxPack]
+        monGroups.monsters.push(obj)
+    }
+}
+
 
 
 // get from file data/json/emit.json?
@@ -614,4 +658,29 @@ async function getColors(){
     }
 
     console.log('colors ready')
+}
+
+function downloadZip(){
+    let info = JSON.stringify(modInfo,null,1)
+    let data = JSON.stringify(mons,null,1)
+    let grp = JSON.stringify(monGroups,null,1)
+
+    let zip = new JSZip()
+
+    zip.folder('StrangeCreatures').file('modinfo.json', info)
+    zip.file('StrangeCreatures/monsters.json', data)
+    zip.file('StrangeCreatures/monstergroups.json', grp)
+
+    zip.generateAsync({type:"blob"})
+    .then(function (blob) {
+        let url = URL.createObjectURL(blob)
+
+        let dl = document.createElement('a')
+        dl.href = url
+        dl.download = 'StrangeCreatures.zip'
+
+        document.body.append(dl)
+        dl.click()
+        dl.remove()
+    });
 }

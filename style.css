@@ -56,3 +56,10 @@ html {
     margin-right: 5px;
     margin-left: 40%;
 }
+
+#downloadContainer{
+    border: solid green 1px;
+    background-color: black;
+    position: sticky;
+    top:0px;
+}
